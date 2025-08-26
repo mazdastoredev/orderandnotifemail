@@ -1,68 +1,80 @@
-# CodeIgniter 4 Application Starter
+# 🛒 Order Management System – CodeIgniter 4 + Tailwind CSS
 
-## What is CodeIgniter?
+## 📌 Overview
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+This project is a **simple order management system** built with **CodeIgniter 4**.  
+It allows users to place product orders and automatically sends **email notifications** using **SMTP** once the order is successfully placed.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+The system is designed with a **modern UI** powered by **Tailwind CSS**, ensuring a clean and responsive interface.
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+---
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+## ✨ Features
 
-## Installation & updates
+- ✅ Place product orders
+- ✅ Automatic **email notifications** via SMTP after successful order
+- ✅ Responsive design with **Tailwind CSS**
+- ✅ Built on **CodeIgniter 4** framework
+- ✅ Easy to customize and deploy
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+---
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+## 🛠️ Tech Stack
 
-## Setup
+- **Backend:** CodeIgniter 4 (PHP 8+)
+- **Frontend:** Tailwind CSS
+- **Database:** MySQL/MariaDB
+- **Email Service:** SMTP
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+---
 
-## Important Change with index.php
+## 🚀 Installation
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+### 1. Clone the repository
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+```bash
+git clone https://github.com/your-username/ci4-order-system.git
+cd ci4-order-system
 
-**Please** read the user guide for a better explanation of how CI4 works!
+2. composer install
+3. Set up your .env file:
+database.default.hostname = localhost
+database.default.database = your_database
+database.default.username = your_username
+database.default.password = your_password
+database.default.DBDriver = MySQLi
 
-## Repository Management
+email.protocol = smtp
+email.SMTPHost = smtp.yourhost.com
+email.SMTPUser = your@email.com
+email.SMTPPass = yourpassword
+email.SMTPPort = 587
+email.mailType = html
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+4. php spark migrate
+5. php spark serve
+6. http://localhost:8080
+```
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+NOTE!!!
+Edit File App/Config/Email.php
+public string $fromEmail = 'username@namadomain';
+public string $fromName = 'Order System';
 
-## Server Requirements
+public string $protocol = 'smtp';
+public string $SMTPHost = 'mail.namadomain';
+public string $SMTPUser = 'username@namadomain';
+public string $SMTPPass = 'PasswordemailHosting'; // pakai password email hosting
+public int $SMTPPort = 465; // coba dulu SSL
+public int $SMTPTimeout = 10;
+public bool $SMTPKeepAlive = false;
+public string $SMTPCrypto = 'ssl'; // gunakan ssl untuk port 465
 
-PHP version 8.1 or higher is required, with the following extensions installed:
-
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+public bool $wordWrap = true;
+public int $wrapChars = 76;
+public string $mailType = 'html';
+public string $charset = 'UTF-8';
+public bool $validate = true;
+public int $priority = 3;
+public string $CRLF = "\r\n";
+public string $newline = "\r\n";
