@@ -56,7 +56,9 @@ email.mailType = html
 6. http://localhost:8080
 ```
 
-NOTE!!!
+## NOTE!!!
+
+```bash
 Edit File App/Config/Email.php
 public string $fromEmail = 'username@namadomain';
 public string $fromName = 'Order System';
@@ -78,3 +80,4 @@ public bool $validate = true;
 public int $priority = 3;
 public string $CRLF = "\r\n";
 public string $newline = "\r\n";
+```
