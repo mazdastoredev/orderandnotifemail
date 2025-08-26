@@ -34,21 +34,28 @@ class OrderController extends BaseController
     public function create()
     {
         if (!$this->request->is('post')) {
-            return redirect()->to('/order');
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Invalid request'
+            ]);
         }
 
         $validation = \Config\Services::validation();
         $validation->setRules([
-            'customer_name' => 'required|min_length[3]',
-            'customer_email' => 'required|valid_email',
-            'customer_phone' => 'required',
+            'customer_name'   => 'required|min_length[3]',
+            'customer_email'  => 'required|valid_email',
+            'customer_phone'  => 'required',
             'customer_address' => 'required',
-            'products' => 'required',
-            'quantities' => 'required'
+            'products'        => 'required',
+            'quantities'      => 'required'
         ]);
 
         if (!$validation->withRequest($this->request)->run()) {
-            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => 'Validasi gagal',
+                'errors'  => $validation->getErrors()
+            ]);
         }
 
         $db = \Config\Database::connect();
@@ -57,23 +64,22 @@ class OrderController extends BaseController
         try {
             // Create or find customer
             $customerData = [
-                'name' => $this->request->getPost('customer_name'),
-                'email' => $this->request->getPost('customer_email'),
-                'phone' => $this->request->getPost('customer_phone'),
+                'name'    => $this->request->getPost('customer_name'),
+                'email'   => $this->request->getPost('customer_email'),
+                'phone'   => $this->request->getPost('customer_phone'),
                 'address' => $this->request->getPost('customer_address')
             ];
 
             $customer = $this->customerModel->findOrCreateCustomer($customerData);
 
             // Create order
-            $orderNumber = $this->orderModel->generateOrderNumber();
-            $products = $this->request->getPost('products');
-            $quantities = $this->request->getPost('quantities');
-            $totalAmount = 0;
+            $orderNumber  = $this->orderModel->generateOrderNumber();
+            $products     = $this->request->getPost('products');
+            $quantities   = $this->request->getPost('quantities');
+            $totalAmount  = 0;
 
-            // Calculate total amount
             foreach ($products as $index => $productId) {
-                $product = $this->productModel->find($productId);
+                $product  = $this->productModel->find($productId);
                 $quantity = (int) $quantities[$index];
 
                 if (!$product || $product['stock'] < $quantity) {
@@ -84,11 +90,11 @@ class OrderController extends BaseController
             }
 
             $orderData = [
-                'customer_id' => $customer['id'],
+                'customer_id'  => $customer['id'],
                 'order_number' => $orderNumber,
                 'total_amount' => $totalAmount,
-                'status' => 'pending',
-                'notes' => $this->request->getPost('notes') ?? ''
+                'status'       => 'pending',
+                'notes'        => $this->request->getPost('notes') ?? ''
             ];
 
             $this->orderModel->insert($orderData);
@@ -96,14 +102,14 @@ class OrderController extends BaseController
 
             // Create order items and update stock
             foreach ($products as $index => $productId) {
-                $product = $this->productModel->find($productId);
+                $product  = $this->productModel->find($productId);
                 $quantity = (int) $quantities[$index];
 
                 $orderItemData = [
-                    'order_id' => $orderId,
-                    'product_id' => $productId,
-                    'quantity' => $quantity,
-                    'unit_price' => $product['price'],
+                    'order_id'    => $orderId,
+                    'product_id'  => $productId,
+                    'quantity'    => $quantity,
+                    'unit_price'  => $product['price'],
                     'total_price' => $product['price'] * $quantity
                 ];
 
@@ -114,18 +120,28 @@ class OrderController extends BaseController
             $db->transComplete();
 
             if ($db->transStatus() === false) {
-                throw new DatabaseException('Transaction failed');
+                throw new \Exception('Transaction failed');
             }
 
             // Send email notification
             $this->sendOrderNotification($orderId);
 
-            return redirect()->to('/order/success/' . $orderId)->with('success', 'Pesanan berhasil dibuat!');
+            // ✅ Balikin JSON kalau AJAX
+            return $this->response->setJSON([
+                'success' => true,
+                'orderId' => $orderId
+            ]);
         } catch (\Exception $e) {
             $db->transRollback();
-            return redirect()->back()->withInput()->with('error', $e->getMessage());
+            return $this->response->setJSON([
+                'success' => false,
+                'message' => $e->getMessage()
+            ]);
         }
     }
+
+
+
 
     public function success($orderId)
     {

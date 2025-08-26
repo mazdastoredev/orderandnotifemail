@@ -19,8 +19,8 @@
         </div>
 
         <div class="p-8">
-            <?= form_open('/order/create', ['class' => 'space-y-8']) ?>
-
+            <?= form_open('/order/create', ['class' => 'space-y-8', 'id' => 'orderForm']) ?>
+            <?= csrf_field() ?>
             <!-- Customer Information -->
             <div class="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-100">
                 <h3 class="text-xl font-semibold text-gray-800 mb-6 flex items-center">
@@ -179,12 +179,17 @@
                         </div>
                     </div>
 
-                    <button type="submit"
-                        class="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-xl hover:shadow-2xl animate-bounce-gentle">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <button type="submit" id="submitBtn"
+                        class="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 hover:from-blue-700 hover:via-purple-700 hover:to-indigo-700 text-white px-8 py-4 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105 shadow-xl hover:shadow-2xl animate-bounce-gentle disabled:opacity-70 disabled:cursor-not-allowed disabled:transform-none">
+                        <svg class="w-6 h-6" id="submitIcon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                         </svg>
-                        <span>Buat Pesanan</span>
+                        <!-- Loading Spinner -->
+                        <svg class="animate-spin w-6 h-6 hidden" id="loadingSpinner" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="submitText">Buat Pesanan</span>
                     </button>
                 </div>
             </div>
@@ -194,7 +199,117 @@
     </div>
 </div>
 
+<!-- Loading Overlay -->
+<div id="loadingOverlay" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 hidden">
+    <div class="flex items-center justify-center h-full">
+        <div class="bg-white rounded-2xl p-8 shadow-2xl text-center max-w-sm w-full mx-4">
+            <div class="animate-spin w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full mx-auto mb-4"></div>
+            <h3 class="text-xl font-semibold text-gray-800 mb-2">Memproses Pesanan</h3>
+            <p class="text-gray-600">Harap tunggu sebentar...</p>
+        </div>
+    </div>
+</div>
+
+<style>
+    .animate-fade-in {
+        animation: fadeIn 0.5s ease-in-out;
+    }
+
+    .animate-bounce-gentle {
+        animation: bounceGentle 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes bounceGentle {
+
+        0%,
+        20%,
+        50%,
+        80%,
+        100% {
+            transform: translateY(0);
+        }
+
+        40% {
+            transform: translateY(-3px);
+        }
+
+        60% {
+            transform: translateY(-2px);
+        }
+    }
+</style>
+
 <script>
+    const BASE_URL = '<?= base_url() ?>';
+    let isSubmitting = false;
+    (function() {
+        const form = document.getElementById('orderForm');
+        const overlay = document.getElementById('loadingOverlay');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            overlay && overlay.classList.remove('hidden');
+
+            const formData = new FormData(form);
+
+            try {
+                const res = await fetch(form.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest', // supaya $this->request->isAJAX() = true
+                        'Accept': 'application/json' // minta JSON
+                    },
+                    credentials: 'same-origin'
+                });
+
+                const ct = res.headers.get('content-type') || '';
+
+                // Jika server balas error (403/422/500)
+                if (!res.ok) {
+                    let msg = 'Terjadi kesalahan server.';
+                    if (ct.includes('application/json')) {
+                        const j = await res.json();
+                        msg = typeof j.message === 'string' ? j.message : Object.values(j.message || {}).join('\n');
+                    } else {
+                        msg = await res.text();
+                    }
+                    throw new Error(msg);
+                }
+
+                // Pastikan JSON
+                const data = ct.includes('application/json') ? await res.json() : null;
+
+                if (data && data.success) {
+                    window.location.assign(BASE_URL + 'order/success/' + data.orderId);
+                    return;
+                }
+
+                const msg = data && data.message ?
+                    (typeof data.message === 'string' ? data.message : Object.values(data.message).join('\n')) :
+                    'Gagal memproses pesanan.';
+                throw new Error(msg);
+
+            } catch (err) {
+                overlay && overlay.classList.add('hidden');
+                alert(err.message || 'Terjadi kesalahan server.');
+            }
+        });
+    })();
+
     function addProduct() {
         const productList = document.getElementById('product-list');
         const newProductItem = productList.querySelector('.product-item').cloneNode(true);
@@ -212,11 +327,11 @@
         removeBtn.type = 'button';
         removeBtn.className = 'flex items-center space-x-2 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 text-white px-4 py-2 rounded-xl transition-all duration-200 transform hover:scale-105 shadow-lg hover:shadow-xl';
         removeBtn.innerHTML = `
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-            </svg>
-            <span>Hapus</span>
-        `;
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+</svg>
+<span>Hapus</span>
+`;
         removeBtn.onclick = function() {
             newProductItem.style.transform = 'scale(0.95)';
             newProductItem.style.opacity = '0';
@@ -291,9 +406,76 @@
         }, 200);
     }
 
+    function showLoading() {
+        const submitBtn = document.getElementById('submitBtn');
+        const submitIcon = document.getElementById('submitIcon');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const submitText = document.getElementById('submitText');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Disable button and show loading state
+        submitBtn.disabled = true;
+        submitIcon.classList.add('hidden');
+        loadingSpinner.classList.remove('hidden');
+        submitText.textContent = 'Memproses...';
+
+        // Show overlay
+        loadingOverlay.classList.remove('hidden');
+
+        // Disable form inputs
+        const formInputs = document.querySelectorAll('input, select, textarea, button');
+        formInputs.forEach(input => {
+            if (input.type !== 'submit') {
+                input.disabled = true;
+            }
+        });
+    }
+
+    function hideLoading() {
+        const submitBtn = document.getElementById('submitBtn');
+        const submitIcon = document.getElementById('submitIcon');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const submitText = document.getElementById('submitText');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Enable button and hide loading state
+        submitBtn.disabled = false;
+        submitIcon.classList.remove('hidden');
+        loadingSpinner.classList.add('hidden');
+        submitText.textContent = 'Buat Pesanan';
+
+        // Hide overlay
+        loadingOverlay.classList.add('hidden');
+
+        // Enable form inputs
+        const formInputs = document.querySelectorAll('input, select, textarea, button');
+        formInputs.forEach(input => {
+            input.disabled = false;
+        });
+
+        isSubmitting = false;
+    }
+
+
+    // Handle page unload (back button, refresh, etc.) during submission
+    window.addEventListener('beforeunload', function(e) {
+        if (isSubmitting) {
+            e.preventDefault();
+            e.returnValue = 'Pesanan sedang diproses. Yakin ingin meninggalkan halaman?';
+            return e.returnValue;
+        }
+    });
+
     // Initialize event listeners
     document.addEventListener('DOMContentLoaded', function() {
         document.querySelectorAll('.product-item').forEach(addEventListeners);
+    });
+
+    // Handle cases where form submission fails and user is redirected back
+    window.addEventListener('pageshow', function(e) {
+        if (e.persisted || (window.performance && window.performance.navigation.type === 2)) {
+            hideLoading();
+        }
     });
 </script>
 
